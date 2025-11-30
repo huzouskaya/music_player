@@ -15,6 +15,8 @@ from core.playlist_manager import PlaylistManager
 from core.metadata_editor import MetadataEditor
 from core.lyrics_manager import LyricsManager
 from core.file_scanner import FileScanner
+from auth.payment_verifier import PaymentVerifier
+from ui.subscription_dialog import SubscriptionDialog
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -109,6 +111,8 @@ class MainWindow(QMainWindow):
         
         self.playlists_list = QListWidget()
         self.playlists_list.itemDoubleClicked.connect(self.load_playlist)
+        self.playlists_list.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.playlists_list.customContextMenuRequested.connect(self.show_playlist_context_menu)
         self.refresh_playlists()
         layout.addWidget(QLabel("Плейлисты:"))
         layout.addWidget(self.playlists_list)
@@ -123,7 +127,7 @@ class MainWindow(QMainWindow):
         track_info_layout = QVBoxLayout(track_info_group)
         
         self.track_info = QLabel("Трек не выбран")
-        self.track_info.setStyleSheet("font-size: 18px; font-weight: bold; padding: 15px;")
+        self.track_info.setStyleSheet("font-size: 32px; font-weight: bold; padding: 15px;")
         self.track_info.setAlignment(Qt.AlignCenter)
         track_info_layout.addWidget(self.track_info)
         
@@ -190,7 +194,7 @@ class MainWindow(QMainWindow):
         """
         
         button_size = QSize(100, 100)
-        icon_size = QSize(70, 70)
+        icon_size = QSize(32, 32)
 
         self.prev_btn = QPushButton()
         self.prev_btn.setIcon(self.prev_icon)
@@ -400,7 +404,7 @@ class MainWindow(QMainWindow):
         if self.player.current_playlist:
             self.current_track = self.player.current_playlist[self.player.current_index]
             self.load_track_info()
-            self.play_btn.setIcon(self.pause_icon)  # ← меняем на иконку паузы
+            self.play_btn.setIcon(self.pause_icon)
             self.play_btn.setToolTip("Пауза")
         self.highlight_current_track()
 
@@ -409,7 +413,7 @@ class MainWindow(QMainWindow):
         if self.player.current_playlist:
             self.current_track = self.player.current_playlist[self.player.current_index]
             self.load_track_info()
-            self.play_btn.setIcon(self.pause_icon)  # ← меняем на иконку паузы
+            self.play_btn.setIcon(self.pause_icon)
             self.play_btn.setToolTip("Пауза")
         self.highlight_current_track()
         
@@ -436,6 +440,14 @@ class MainWindow(QMainWindow):
         self.play_btn.setToolTip(tooltip)
             
     def search_genius_lyrics(self):
+        verifier = PaymentVerifier()
+        if not verifier.verify_license():
+            dialog = SubscriptionDialog(self)
+            dialog.exec()
+            # Check again after dialog closes
+            if not verifier.verify_license():
+                return
+
         metadata = self.metadata_editor.get_metadata(self.current_track) if self.current_track else {}
 
         artist = metadata.get('artist', '')
@@ -537,6 +549,14 @@ class MainWindow(QMainWindow):
             self.lyrics_text.setText(lyrics.get('original', ''))
     
     def save_metadata(self):
+        verifier = PaymentVerifier()
+        if not verifier.verify_license():
+            dialog = SubscriptionDialog(self)
+            dialog.exec()
+            # Check again after dialog closes
+            if not verifier.verify_license():
+                return
+
         if not self.current_track:
             return
         metadata = {
@@ -645,3 +665,29 @@ class MainWindow(QMainWindow):
             playlist_name, file_path
         ):
             QMessageBox.warning(self, "Ошибка", "Не удалось добавить трек в плейлист")
+
+    def show_playlist_context_menu(self, position):
+        item = self.playlists_list.itemAt(position)
+        if not item:
+            return
+
+        menu = QMenu(self)
+
+        delete_action = QAction("Удалить плейлист", self)
+        delete_action.triggered.connect(lambda: self.delete_playlist(item.text()))
+        menu.addAction(delete_action)
+
+        menu.exec_(self.playlists_list.mapToGlobal(position))
+
+    def delete_playlist(self, playlist_name):
+        reply = QMessageBox.question(self, "Подтверждение",
+                                   f"Вы действительно хотите удалить плейлист '{playlist_name}'?",
+                                   QMessageBox.Yes | QMessageBox.No,
+                                   QMessageBox.No)
+
+        if reply == QMessageBox.Yes:
+            if self.playlist_manager.delete_playlist(playlist_name):
+                self.refresh_playlists()
+                QMessageBox.information(self, "Успех", f"Плейлист '{playlist_name}' удален")
+            else:
+                QMessageBox.warning(self, "Ошибка", "Не удалось удалить плейлист")
