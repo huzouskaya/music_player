@@ -4,7 +4,8 @@ from PyQt5.QtWidgets import (QMainWindow, QVBoxLayout, QHBoxLayout,
                             QWidget, QMessageBox, QTextEdit, QLineEdit, QFormLayout,
                             QListWidgetItem, QMenu, QAction,
                             QGroupBox)
-from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtCore import Qt, QTimer, QSize
+from PyQt5.QtGui import QIcon
 import sys
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
@@ -28,10 +29,18 @@ class MainWindow(QMainWindow):
         self._slider_pressed = False
         self.metadata_visible = False
         self.lyrics_visible = False
-
+        
+        self.load_icons()
         self.setup_ui()
         self.setup_timer()
         self.setup_player_connections()
+        
+    def load_icons(self):
+        self.prev_icon = QIcon("ui/icons/previous.png")
+        self.play_icon = QIcon("ui/icons/play.png")
+        self.pause_icon = QIcon("ui/icons/pause.png") 
+        self.stop_icon = QIcon("ui/icons/stop.png")
+        self.next_icon = QIcon("ui/icons/next.png")
     
     def setup_player_connections(self):
         if hasattr(self.player, 'finished'):
@@ -180,24 +189,40 @@ class MainWindow(QMainWindow):
         }
         """
         
-        self.prev_btn = QPushButton("⏮")
-        self.prev_btn.setStyleSheet(button_style)
+        button_size = QSize(100, 100)
+        icon_size = QSize(70, 70)
+
+        self.prev_btn = QPushButton()
+        self.prev_btn.setIcon(self.prev_icon)
+        self.prev_btn.setIconSize(icon_size)
+        self.prev_btn.setFixedSize(button_size)
         self.prev_btn.clicked.connect(self.previous_track)
-        control_layout.addWidget(self.prev_btn)
-        
-        self.play_btn = QPushButton("▶")
-        self.play_btn.setStyleSheet(button_style)
+        self.prev_btn.setToolTip("Предыдущий трек")
+
+        self.play_btn = QPushButton()
+        self.play_btn.setIcon(self.play_icon)
+        self.play_btn.setIconSize(icon_size)
+        self.play_btn.setFixedSize(button_size)
         self.play_btn.clicked.connect(self.toggle_play)
-        control_layout.addWidget(self.play_btn)
-        
-        self.stop_btn = QPushButton("⏹")
-        self.stop_btn.setStyleSheet(button_style)
+        self.play_btn.setToolTip("Воспроизвести/Пауза")
+
+        self.stop_btn = QPushButton()
+        self.stop_btn.setIcon(self.stop_icon)
+        self.stop_btn.setIconSize(icon_size)
+        self.stop_btn.setFixedSize(button_size)
         self.stop_btn.clicked.connect(self.player.stop)
-        control_layout.addWidget(self.stop_btn)
-        
-        self.next_btn = QPushButton("⏭")
-        self.next_btn.setStyleSheet(button_style)
+        self.stop_btn.setToolTip("Стоп")
+
+        self.next_btn = QPushButton()
+        self.next_btn.setIcon(self.next_icon)
+        self.next_btn.setIconSize(icon_size)
+        self.next_btn.setFixedSize(button_size)
         self.next_btn.clicked.connect(self.next_track)
+        self.next_btn.setToolTip("Следующий трек")
+        
+        control_layout.addWidget(self.prev_btn)
+        control_layout.addWidget(self.play_btn)
+        control_layout.addWidget(self.stop_btn) 
         control_layout.addWidget(self.next_btn)
         
         layout.addWidget(control_group)
@@ -353,24 +378,30 @@ class MainWindow(QMainWindow):
         self.scan_files(['.mp3', '.wav', '.ogg', '.flac', '.m4a', '.aac'])
     
     def play_selected_track(self, item):
-        if item:
-            file_path = item.data(Qt.UserRole)
-            if file_path and os.path.exists(file_path):
-                if file_path in self.player.current_playlist:
-                    self.player.current_index = self.player.current_playlist.index(file_path)
-                
-                self.player.play(file_path)
-                self.current_track = file_path
-                self.load_track_info()
-                self.play_btn.setText("⏸")
-            self.highlight_current_track()
+        if not item:
+            return
+        file_path = item.data(Qt.UserRole)
+        if file_path and os.path.exists(file_path):
+            self._extracted_from_play_selected_track_5(file_path)
+        self.highlight_current_track()
+
+    def _extracted_from_play_selected_track_5(self, file_path):
+        if file_path in self.player.current_playlist:
+            self.player.current_index = self.player.current_playlist.index(file_path)
+
+        self.player.play(file_path)
+        self.current_track = file_path
+        self.load_track_info()
+        self.play_btn.setIcon(self.pause_icon)
+        self.play_btn.setToolTip("Пауза")
 
     def next_track(self):
         self.player.next_track()
         if self.player.current_playlist:
             self.current_track = self.player.current_playlist[self.player.current_index]
             self.load_track_info()
-            self.play_btn.setText("⏸")
+            self.play_btn.setIcon(self.pause_icon)  # ← меняем на иконку паузы
+            self.play_btn.setToolTip("Пауза")
         self.highlight_current_track()
 
     def previous_track(self):
@@ -378,9 +409,10 @@ class MainWindow(QMainWindow):
         if self.player.current_playlist:
             self.current_track = self.player.current_playlist[self.player.current_index]
             self.load_track_info()
-            self.play_btn.setText("⏸")
+            self.play_btn.setIcon(self.pause_icon)  # ← меняем на иконку паузы
+            self.play_btn.setToolTip("Пауза")
         self.highlight_current_track()
-    
+        
     def highlight_current_track(self):
         if self.player.current_playlist and self.player.current_index >= 0:
             for i in range(self.files_list.count()):
@@ -393,10 +425,15 @@ class MainWindow(QMainWindow):
     def toggle_play(self):
         if self.player.is_playing():
             self.player.pause()
-            self.play_btn.setText("▶")
+            icon = self.play_icon
+            tooltip = "Воспроизвести"
         else:
             self.player.play()
-            self.play_btn.setText("⏸")
+            icon = self.pause_icon
+            tooltip = "Пауза"
+        
+        self.play_btn.setIcon(icon)
+        self.play_btn.setToolTip(tooltip)
             
     def search_genius_lyrics(self):
         metadata = self.metadata_editor.get_metadata(self.current_track) if self.current_track else {}
@@ -445,7 +482,13 @@ class MainWindow(QMainWindow):
         return result
     
     def set_volume(self, value):
-        self.player.set_volume(value)
+        if value == 0:
+            volume = 0
+        else:
+            volume = int((value / 100.0) ** 1.5 * 100)
+            volume = min(100, max(0, volume))
+        
+        self.player.set_volume(volume)
         self.volume_label.setText(f"{value}%")
     
     def on_slider_move(self, position):
@@ -494,25 +537,26 @@ class MainWindow(QMainWindow):
             self.lyrics_text.setText(lyrics.get('original', ''))
     
     def save_metadata(self):
-        if self.current_track:
-            metadata = {
-                'title': self.metadata_title.text(),
-                'artist': self.metadata_artist.text(),
-                'album': self.metadata_album.text(),
-                'year': self.metadata_year.text(),
-                'genre': self.metadata_genre.text(),
-                'comment': self.metadata_comment.toPlainText()
-            }
+        if not self.current_track:
+            return
+        metadata = {
+            'title': self.metadata_title.text(),
+            'artist': self.metadata_artist.text(),
+            'album': self.metadata_album.text(),
+            'year': self.metadata_year.text(),
+            'genre': self.metadata_genre.text(),
+            'comment': self.metadata_comment.toPlainText()
+        }
 
-            if self.metadata_editor.set_metadata(self.current_track, metadata):
-                self.load_track_info()
-                for i in range(self.files_list.count()):
-                    item = self.files_list.item(i)
-                    if item.data(Qt.UserRole) == self.current_track:
-                        item.setText(self.get_display_name(self.current_track))
-                        break
-            else:
-                QMessageBox.warning(self, "Ошибка", "Не удалось сохранить метаданные")
+        if self.metadata_editor.set_metadata(self.current_track, metadata):
+            self.load_track_info()
+            for i in range(self.files_list.count()):
+                item = self.files_list.item(i)
+                if item.data(Qt.UserRole) == self.current_track:
+                    item.setText(self.get_display_name(self.current_track))
+                    break
+        else:
+            QMessageBox.warning(self, "Ошибка", "Не удалось сохранить метаданные")
     
     def save_lyrics(self):
         if self.current_track:
