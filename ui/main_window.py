@@ -3,8 +3,8 @@ from PyQt5.QtWidgets import (QMainWindow, QVBoxLayout, QHBoxLayout,
                             QPushButton, QListWidget, QSlider, QLabel,
                             QWidget, QMessageBox, QTextEdit, QLineEdit, QFormLayout,
                             QListWidgetItem, QMenu, QAction,
-                            QGroupBox)
-from PyQt5.QtCore import Qt, QTimer, QSize
+                            QGroupBox, QApplication)
+from PyQt5.QtCore import Qt, QTimer, QSize, QSettings
 from PyQt5.QtGui import QIcon
 import sys
 
@@ -17,6 +17,10 @@ from core.lyrics_manager import LyricsManager
 from core.file_scanner import FileScanner
 from auth.payment_verifier import PaymentVerifier
 from ui.subscription_dialog import SubscriptionDialog
+from ui.account_window import AccountWindow
+from ui.settings_window import SettingsWindow
+from auth.account_manager import AccountManager
+from ui.themes import ThemeManager
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -32,10 +36,16 @@ class MainWindow(QMainWindow):
         self.metadata_visible = False
         self.lyrics_visible = False
         
+        ThemeManager.load_theme_from_settings()
+        
         self.load_icons()
         self.setup_ui()
         self.setup_timer()
         self.setup_player_connections()
+        self.account_manager = AccountManager("http://localhost:5000")
+        self.check_subscription_on_startup()
+        self.create_menu()
+        self.show_promo_if_needed()
         
     def load_icons(self):
         self.prev_icon = QIcon("ui/icons/previous.png")
@@ -138,9 +148,9 @@ class MainWindow(QMainWindow):
         
         time_layout = QHBoxLayout()
         self.position_label = QLabel("0:00")
-        self.position_label.setStyleSheet("font-size: 14px;")
+        self.position_label.setStyleSheet("font-size: 24px; font-weight: bold; min-width: 80px; margin-left: 20px")
         self.duration_label = QLabel("0:00")
-        self.duration_label.setStyleSheet("font-size: 14px;")
+        self.duration_label.setStyleSheet("font-size: 24px; font-weight: bold; min-width: 80px;")
         
         time_layout.addWidget(self.position_label)
         time_layout.addStretch()
@@ -234,25 +244,25 @@ class MainWindow(QMainWindow):
         volume_group = QGroupBox("Громкость")
         volume_layout = QHBoxLayout(volume_group)
         
-        volume_layout.addWidget(QLabel("🔊"))
         self.volume_slider = QSlider(Qt.Horizontal)
         self.volume_slider.setRange(0, 100)
         self.volume_slider.setValue(50)
         self.volume_slider.valueChanged.connect(self.set_volume)
         volume_layout.addWidget(self.volume_slider)
         self.volume_label = QLabel("50%")
+        self.volume_label.setStyleSheet("font-size: 32px; font-weight: bold; min-width: 100px;")
         volume_layout.addWidget(self.volume_label)
         
         layout.addWidget(volume_group)
         
         info_buttons_layout = QHBoxLayout()
         
-        self.metadata_btn = QPushButton("📝 Метаданные")
+        self.metadata_btn = QPushButton("Метаданные")
         self.metadata_btn.setCheckable(True)
         self.metadata_btn.clicked.connect(self.toggle_metadata)
         info_buttons_layout.addWidget(self.metadata_btn)
         
-        self.lyrics_btn = QPushButton("🎵 Текст песни")
+        self.lyrics_btn = QPushButton("Текст песни")
         self.lyrics_btn.setCheckable(True)
         self.lyrics_btn.clicked.connect(self.toggle_lyrics)
         info_buttons_layout.addWidget(self.lyrics_btn)
@@ -313,9 +323,13 @@ class MainWindow(QMainWindow):
         
         btn_layout = QHBoxLayout()
         
-        genius_btn = QPushButton("Найти на Genius")
-        genius_btn.clicked.connect(self.search_genius_lyrics)
-        btn_layout.addWidget(genius_btn)
+        # genius_btn = QPushButton("Найти на Genius")
+        # genius_btn.clicked.connect(self.search_genius_lyrics)
+        # btn_layout.addWidget(genius_btn)
+        
+        recognize_btn = QPushButton("Распознать текст")
+        recognize_btn.clicked.connect(self.recognize_lyrics)
+        btn_layout.addWidget(recognize_btn)
         
         save_btn = QPushButton("Сохранить текст")
         save_btn.clicked.connect(self.save_lyrics)
@@ -444,7 +458,6 @@ class MainWindow(QMainWindow):
         if not verifier.verify_license():
             dialog = SubscriptionDialog(self)
             dialog.exec()
-            # Check again after dialog closes
             if not verifier.verify_license():
                 return
 
@@ -479,7 +492,7 @@ class MainWindow(QMainWindow):
 
             self.statusBar().showMessage("Ищем текст на Genius...")
             lyrics_text = self.lyrics_manager.search_genius(artist, title)
-            self.statusBar().showMessage("Поиск завершен")
+            self.statusBar().showMessage("Поиск завершён")
             self.lyrics_text.setText(lyrics_text)
 
             if "не найден" in lyrics_text or "Ошибка" in lyrics_text:
@@ -553,7 +566,6 @@ class MainWindow(QMainWindow):
         if not verifier.verify_license():
             dialog = SubscriptionDialog(self)
             dialog.exec()
-            # Check again after dialog closes
             if not verifier.verify_license():
                 return
 
@@ -680,14 +692,115 @@ class MainWindow(QMainWindow):
         menu.exec_(self.playlists_list.mapToGlobal(position))
 
     def delete_playlist(self, playlist_name):
-        reply = QMessageBox.question(self, "Подтверждение",
-                                   f"Вы действительно хотите удалить плейлист '{playlist_name}'?",
-                                   QMessageBox.Yes | QMessageBox.No,
-                                   QMessageBox.No)
+        if self.playlist_manager.delete_playlist(playlist_name):
+            self.refresh_playlists()
+        else:
+            QMessageBox.warning(self, "Ошибка", "Не удалось удалить плейлист")
 
-        if reply == QMessageBox.Yes:
-            if self.playlist_manager.delete_playlist(playlist_name):
-                self.refresh_playlists()
-                QMessageBox.information(self, "Успех", f"Плейлист '{playlist_name}' удален")
-            else:
-                QMessageBox.warning(self, "Ошибка", "Не удалось удалить плейлист")
+    def create_menu(self):
+        menubar = self.menuBar()
+        
+        settings_menu = menubar.addMenu('Настройки')
+        settings_action = QAction('Настройки приложения', self)
+        settings_action.triggered.connect(self.open_settings)
+        settings_menu.addAction(settings_action)
+        
+        account_action = QAction('Мой аккаунт', self)
+        account_action.triggered.connect(self.open_account)
+        settings_menu.addAction(account_action)
+        
+        subscription_menu = menubar.addMenu('Подписка')
+        buy_action = QAction('Купить подписку', self)
+        buy_action.triggered.connect(self.open_payment)
+        subscription_menu.addAction(buy_action)
+        
+        check_action = QAction('Проверить статус', self)
+        check_action.triggered.connect(self.check_subscription)
+        subscription_menu.addAction(check_action)
+    
+    def check_subscription_on_startup(self):
+        if self.try_auto_login():
+            result = self.account_manager.check_subscription()
+            if result and result.get('valid'):
+                self.enable_premium_features()
+                return True
+        
+        self.disable_premium_features()
+        return False
+    
+    def try_auto_login(self) -> bool:
+        return False
+    
+    def show_promo_if_needed(self):
+        if not self.has_premium:
+            self.show_promo_dialog()
+    
+    def show_promo_dialog(self):
+        from PyQt5.QtWidgets import QDialog, QVBoxLayout, QLabel, QPushButton
+        
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Получите премиум доступ!")
+        dialog.setGeometry(400, 400, 400, 200)
+        
+        layout = QVBoxLayout()
+        
+        title = QLabel("🎵 Премиум подписка Music Player")
+        title.setStyleSheet("font-size: 18px; font-weight: bold;")
+        
+        features = QLabel(
+            "🔓 Получите доступ ко всем функциям:\n"
+            "• Сохранение метатегов\n"
+            "• Поиск в Genius\n"
+            "• Ваша добрая совесть\n"
+            "• Поддержка 4 устройств\n"
+            "• Без рекламы"
+        )
+        
+        button_layout = QHBoxLayout()
+        later_btn = QPushButton("Напомнить позже")
+        buy_btn = QPushButton("Купить подписку")
+        
+        later_btn.clicked.connect(dialog.close)
+        buy_btn.clicked.connect(lambda: self.open_payment_and_close(dialog))
+        
+        button_layout.addWidget(later_btn)
+        button_layout.addWidget(buy_btn)
+        
+        layout.addWidget(title)
+        layout.addWidget(features)
+        layout.addLayout(button_layout)
+        
+        dialog.setLayout(layout)
+        dialog.exec_()
+    
+    def open_payment_and_close(self, dialog):
+        dialog.close()
+        self.open_payment()
+    
+    def open_settings(self):
+        self.settings_window = SettingsWindow(self)
+        self.settings_window.show()
+    
+    def open_account(self):
+        self.account_window = AccountWindow(self.account_manager)
+        self.account_window.show()
+    
+    def open_payment(self):
+        from .payment_window import PaymentWindow
+        self.payment_window = PaymentWindow(self.account_manager)
+        self.payment_window.show()
+    
+    def check_subscription(self):
+        result = self.account_manager.check_subscription()
+        if result and result.get('valid'):
+            QMessageBox.information(self, "Подписка активна", 
+                                        "Ваша подписка активна и работает!")
+        else:
+            QMessageBox.warning(self, "Нет подписки", 
+                                    "У вас нет активной подписки.")
+    
+    def enable_premium_features(self):
+        self.has_premium = True
+    
+    def disable_premium_features(self):
+        self.has_premium = False
