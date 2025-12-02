@@ -2,3 +2,7 @@ PyQt5==5.15.11
 python-vlc==3.0.18121
 mutagen==1.46.0
 requests==2.28.1
+Flask==2.3.3
+Flask-CORS==4.0.0
+PyJWT==2.8.0
+yoomoney==0.1.2

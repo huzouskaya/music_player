@@ -55,10 +55,15 @@ class Database:
                 subscription_id INTEGER,
                 amount REAL NOT NULL,
                 currency TEXT DEFAULT 'RUB',
-                status TEXT DEFAULT 'pending',  -- pending, completed, failed, refunded
+                status TEXT DEFAULT 'pending',  -- pending, completed, failed, refunded, activated
                 payment_date TIMESTAMP,
+                activated_at TIMESTAMP,  -- Время активации
                 transaction_id TEXT UNIQUE,
                 payment_method TEXT,
+                activation_key TEXT UNIQUE,  -- Старый ключ активации для email
+                server_key TEXT,  -- Серверный ключ активации
+                client_key TEXT UNIQUE,  -- Клиентский ключ активации
+                key_expires TIMESTAMP,  -- Срок действия ключа
                 FOREIGN KEY (user_id) REFERENCES users (id),
                 FOREIGN KEY (subscription_id) REFERENCES subscriptions (id)
             )
@@ -248,14 +253,68 @@ class Database:
     def complete_payment(self, payment_id: int, transaction_id: str):
         conn = self.get_connection()
         cursor = conn.cursor()
-        
+
         cursor.execute('''
-            UPDATE payments 
-            SET status = 'completed', 
+            UPDATE payments
+            SET status = 'completed',
                 payment_date = CURRENT_TIMESTAMP,
                 transaction_id = ?
             WHERE id = ?
         ''', (transaction_id, payment_id))
-        
+
+        conn.commit()
+        conn.close()
+
+    def create_payment_with_key(self, user_id: int, amount: float,
+                                subscription_id: int, activation_key: str) -> Optional[int]:
+        try:
+            key_expires = datetime.now() + timedelta(hours=24)  # Ключ действителен 24 часа
+
+            conn = self.get_connection()
+            cursor = conn.cursor()
+
+            cursor.execute('''
+                INSERT INTO payments
+                (user_id, subscription_id, amount, status, activation_key, key_expires)
+                VALUES (?, ?, ?, 'pending', ?, ?)
+            ''', (user_id, subscription_id, amount, activation_key, key_expires.isoformat()))
+
+            payment_id = cursor.lastrowid
+            conn.commit()
+            conn.close()
+
+            return payment_id
+        except Exception:
+            return None
+
+    def activate_license_by_key(self, activation_key: str) -> Optional[Dict]:
+        conn = self.get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute('''
+            SELECT p.*, s.plan_type, s.end_date
+            FROM payments p
+            JOIN subscriptions s ON p.subscription_id = s.id
+            WHERE p.activation_key = ? AND p.status = 'pending'
+            AND p.key_expires > CURRENT_TIMESTAMP
+        ''', (activation_key,))
+
+        payment = cursor.fetchone()
+        conn.close()
+
+        return dict(payment) if payment else None
+
+    def complete_payment_by_key(self, activation_key: str, transaction_id: str):
+        conn = self.get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute('''
+            UPDATE payments
+            SET status = 'completed',
+                payment_date = CURRENT_TIMESTAMP,
+                transaction_id = ?
+            WHERE activation_key = ?
+        ''', (transaction_id, activation_key))
+
         conn.commit()
         conn.close()

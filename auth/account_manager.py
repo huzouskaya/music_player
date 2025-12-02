@@ -114,3 +114,19 @@ class AccountManager:
             return response.status_code == 200 and response.json().get('success', False)
         except Exception:
             return False
+
+    def activate_license(self, activation_key: str) -> Optional[Dict]:
+        try:
+            response = requests.post(
+                f"{self.server_url}/api/activate_license",
+                json={'activation_key': activation_key, 'device_hash': self.device_hash},
+                timeout=10
+            )
+
+            if response.status_code == 200:
+                data = response.json()
+                if data.get('success'):
+                    return data
+            return None
+        except Exception:
+            return None
