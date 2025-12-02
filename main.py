@@ -1,10 +1,10 @@
 import sys
 from PyQt5.QtWidgets import QApplication
-from ui.main_window import MainWindow
+from ui.mini_player import MiniPlayer
 
 def main():
     app = QApplication(sys.argv)
-    window = MainWindow()
+    window = MiniPlayer()
     window.show()
     sys.exit(app.exec())
 
