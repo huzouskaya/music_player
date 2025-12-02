@@ -10,6 +10,7 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from core.player import MusicPlayer
 from core.file_scanner import FileScanner
+from core.metadata_editor import MetadataEditor
 from ui.main_window import MainWindow
 from ui.themes import ThemeManager
 
@@ -18,11 +19,12 @@ class MiniPlayer(QMainWindow):
         super().__init__()
         self.player = MusicPlayer()
         self.scanner = FileScanner()
+        self.metadata_editor = MetadataEditor()
         self.current_track = None
         self._slider_pressed = False
 
         ThemeManager.load_theme_from_settings()
-        
+
         self.load_icons()
         self.setup_ui()
         self.setup_timer()
@@ -151,7 +153,7 @@ class MiniPlayer(QMainWindow):
             mp3_files = files_by_ext.get('.mp3', [])
 
             for file_path in mp3_files:
-                display_name = os.path.splitext(os.path.basename(file_path))[0]
+                display_name = self.get_display_name(file_path)
                 item = QListWidgetItem(display_name)
                 item.setData(Qt.UserRole, file_path)
                 self.files_list.addItem(item)
@@ -256,9 +258,23 @@ class MiniPlayer(QMainWindow):
             if position >= 0.999:
                 self.next_track()
 
+    def get_display_name(self, file_path):
+        metadata = self.metadata_editor.get_metadata(file_path)
+        title = metadata.get('title', '').strip()
+        artist = metadata.get('artist', '').strip()
+
+        if title and artist:
+            return f"{title} - {artist}"
+        elif title:
+            return title
+        elif artist:
+            return f"Неизвестно - {artist}"
+        else:
+            return os.path.splitext(os.path.basename(file_path))[0]
+
     def load_track_info(self):
         if self.current_track:
-            display_name = os.path.splitext(os.path.basename(self.current_track))[0]
+            display_name = self.get_display_name(self.current_track)
             self.track_info.setText(display_name)
 
     def changeEvent(self, event):
@@ -282,7 +298,7 @@ class MiniPlayer(QMainWindow):
 
         main_window.files_list.clear()
         for track_path in self.player.current_playlist:
-            display_name = os.path.splitext(os.path.basename(track_path))[0]
+            display_name = main_window.get_display_name(track_path)
             item = QListWidgetItem(display_name)
             item.setData(Qt.UserRole, track_path)
             main_window.files_list.addItem(item)

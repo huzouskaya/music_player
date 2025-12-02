@@ -700,8 +700,6 @@ class MainWindow(QMainWindow):
     def create_menu(self):
         menubar = self.menuBar()
         
-        # file_menu = menubar.addMenu('Файл')
-        
         settings_menu = menubar.addMenu('Настройки')
         settings_action = QAction('Настройки приложения', self)
         settings_action.triggered.connect(self.open_settings)
