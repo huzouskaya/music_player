@@ -1,5 +1,6 @@
 import requests
 import json
+import os
 from typing import Optional, Dict
 from .device_fingerprint import DeviceFingerprint
 
@@ -9,6 +10,7 @@ class AccountManager:
         self.token = None
         self.user_id = None
         self.device_hash = DeviceFingerprint.get_fingerprint()
+        self.load_token()
         
     def register(self, email: str, password: str) -> bool:
         try:
@@ -23,6 +25,7 @@ class AccountManager:
                 if data['success']:
                     self.token = data['token']
                     self.user_id = data['user_id']
+                    self.save_token()
                     return True
             return False
         except Exception:
@@ -41,6 +44,7 @@ class AccountManager:
                 if data['success']:
                     self.token = data['token']
                     self.user_id = data['user_id']
+                    self.save_token()
                     return True
             return False
         except Exception:
@@ -130,3 +134,23 @@ class AccountManager:
             return None
         except Exception:
             return None
+
+    def save_token(self):
+        """Save token to file for auto-login"""
+        if self.token:
+            try:
+                with open('user_token.json', 'w') as f:
+                    json.dump({'token': self.token, 'user_id': self.user_id}, f)
+            except Exception:
+                pass
+
+    def load_token(self):
+        """Load token from file for auto-login"""
+        if os.path.exists('user_token.json'):
+            try:
+                with open('user_token.json', 'r') as f:
+                    data = json.load(f)
+                    self.token = data.get('token')
+                    self.user_id = data.get('user_id')
+            except Exception:
+                pass

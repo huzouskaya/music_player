@@ -729,6 +729,10 @@ class MainWindow(QMainWindow):
         return False
     
     def try_auto_login(self) -> bool:
+        if self.account_manager.token:
+            # Check if token is still valid
+            info = self.account_manager.get_account_info()
+            return info is not None and info.get('success', False)
         return False
     
     def show_promo_if_needed(self):
@@ -782,6 +786,9 @@ class MainWindow(QMainWindow):
         self.settings_window.show()
     
     def open_account(self):
+        # Close existing account window if it exists
+        if hasattr(self, 'account_window') and self.account_window:
+            self.account_window.close()
         self.account_window = AccountWindow(self.account_manager)
         self.account_window.show()
     

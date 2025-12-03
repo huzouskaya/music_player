@@ -173,6 +173,11 @@ class PaymentWindow(QDialog):
                 pass
 
     def pay_with_yoomoney(self, plan_type):
+        # Check if user is logged in
+        if not self.account_manager.token:
+            QMessageBox.warning(self, "Требуется вход", "Для покупки подписки необходимо войти в аккаунт.")
+            return
+
         try:
             if plan_type == 'monthly':
                 amount = "2"

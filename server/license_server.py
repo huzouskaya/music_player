@@ -237,8 +237,6 @@ def create_payment():
             user_email = user_data['email']
             plan_name = "Месячная подписка" if plan_type == 'monthly' else "Годовая подписка"
 
-            send_activation_email(user_email, client_key, plan_name)
-
             return jsonify({
                 'success': True,
                 'payment_id': payment_id,
@@ -453,6 +451,24 @@ def payment_webhook():
             SET is_active = 1
             WHERE id = ?
         ''', (payment['subscription_id'],))
+
+        # Send activation email after successful payment
+        cursor.execute('''
+            SELECT u.email, p.client_key, s.plan_type
+            FROM payments p
+            JOIN users u ON p.user_id = u.id
+            JOIN subscriptions s ON p.subscription_id = s.id
+            WHERE p.id = ?
+        ''', (payment_id,))
+
+        email_data = cursor.fetchone()
+        if email_data:
+            user_email, client_key, plan_type = email_data
+            plan_name = "Месячная подписка" if plan_type == 'monthly' else "Годовая подписка"
+            email_sent = send_activation_email(user_email, client_key, plan_name)
+            print(f"Activation email sent to {user_email}: {'Success' if email_sent else 'Failed'}")
+        else:
+            print(f"Failed to retrieve email data for payment {payment_id}")
 
         conn.commit()
         conn.close()
