@@ -729,7 +729,7 @@ class MainWindow(QMainWindow):
         return False
     
     def try_auto_login(self) -> bool:
-        return False
+        return self.account_manager.auto_login()
     
     def show_promo_if_needed(self):
         if not self.has_premium:
@@ -744,11 +744,11 @@ class MainWindow(QMainWindow):
         
         layout = QVBoxLayout()
         
-        title = QLabel("🎵 Премиум подписка Music Player")
+        title = QLabel("Премиум подписка Music Player")
         title.setStyleSheet("font-size: 18px; font-weight: bold;")
         
         features = QLabel(
-            "🔓 Получите доступ ко всем функциям:\n"
+            "Получите доступ ко всем функциям:\n"
             "• Сохранение метатегов\n"
             "• Поиск в Genius\n"
             "• Ваша добрая совесть\n"

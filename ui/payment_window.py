@@ -1,4 +1,3 @@
-# ui/payment_window.py
 import os
 import json
 import webbrowser
@@ -21,25 +20,20 @@ class PaymentWindow(QDialog):
         self.setGeometry(300, 300, 600, 500)
 
         layout = QVBoxLayout()
-
-        # Вкладки
         tabs = QTabWidget()
-
-        # Вкладка 1: Оплата
+        
         pay_tab = QWidget()
         pay_layout = QVBoxLayout(pay_tab)
         self.setup_payment_tab(pay_layout)
-        tabs.addTab(pay_tab, "💳 Оплата")
+        tabs.addTab(pay_tab, "💳")
 
-        # Вкладка 2: Активация
         activate_tab = QWidget()
         activate_layout = QVBoxLayout(activate_tab)
         self.setup_activation_tab(activate_layout)
-        tabs.addTab(activate_tab, "🔑 Активация")
+        tabs.addTab(activate_tab, "🔑")
 
         layout.addWidget(tabs)
 
-        # Кнопка закрытия
         close_btn = QPushButton("Закрыть")
         close_btn.clicked.connect(self.close)
         layout.addWidget(close_btn)
@@ -47,21 +41,18 @@ class PaymentWindow(QDialog):
         self.setLayout(layout)
 
     def setup_payment_tab(self, layout):
-        """Вкладка онлайн-оплаты"""
-
-        title = QLabel("💳 Онлайн оплата через ЮMoney")
+        title = QLabel("Онлайн оплата через ЮMoney")
         title.setStyleSheet("font-size: 18px; font-weight: bold; color: #8B00FF;")
         layout.addWidget(title)
 
-        # Информация о подписке
         info_group = QGroupBox("Премиум подписка")
         info_layout = QVBoxLayout(info_group)
 
-        price_label = QLabel("<h2>100 ₽/месяц или 1000 ₽/год</h2>")
-        price_label.setTextFormat(Qt.RichText)
-        info_layout.addWidget(price_label)
-
-        features = QLabel("""
+        self._extracted_from_setup_payment_tab_11(
+            "<h2>100 ₽/месяц или 1000 ₽/год</h2>", info_layout
+        )
+        self._extracted_from_setup_payment_tab_11(
+            """
         <b>Включено:</b>
         • Сохранение метаданных MP3
         • Поиск текстов песен
@@ -69,17 +60,17 @@ class PaymentWindow(QDialog):
         • Без рекламы
         • Поддержка 4 устройств
         • Приоритетная поддержка
-        """)
-        features.setTextFormat(Qt.RichText)
-        info_layout.addWidget(features)
-
+        """,
+            info_layout,
+        )
         layout.addWidget(info_group)
 
         tariffs_group = QGroupBox("Выберите тариф")
         tariffs_layout = QVBoxLayout(tariffs_group)
 
-        monthly_btn = QPushButton("Месячная подписка - 100 ₽")
-        monthly_btn.setStyleSheet("""
+        self._extracted_from_setup_payment_tab_32(
+            "Месячная подписка - 100 ₽",
+            """
             QPushButton {
                 background-color: #2196F3;
                 color: white;
@@ -91,12 +82,13 @@ class PaymentWindow(QDialog):
             QPushButton:hover {
                 background-color: #1976D2;
             }
-        """)
-        monthly_btn.clicked.connect(lambda: self.pay_with_yoomoney('monthly'))
-        tariffs_layout.addWidget(monthly_btn)
-
-        yearly_btn = QPushButton("Годовая подписка - 1000 ₽")
-        yearly_btn.setStyleSheet("""
+        """,
+            'monthly',
+            tariffs_layout,
+        )
+        self._extracted_from_setup_payment_tab_32(
+            "Годовая подписка - 1000 ₽",
+            """
             QPushButton {
                 background-color: #8B00FF;
                 color: white;
@@ -107,25 +99,35 @@ class PaymentWindow(QDialog):
             QPushButton:hover {
                 background-color: #9A32CD;
             }
-        """)
-        yearly_btn.clicked.connect(lambda: self.pay_with_yoomoney('yearly'))
-        tariffs_layout.addWidget(yearly_btn)
-
+        """,
+            'yearly',
+            tariffs_layout,
+        )
         layout.addWidget(tariffs_group)
 
-        instruction = QLabel("""
+        self._extracted_from_setup_payment_tab_11(
+            """
         <b>Как оплатить:</b><br>
         1. Выберите тариф<br>
         2. Оплатите выбранную сумму<br>
         3. Ключ придет на email в течение 5 минут<br>
         4. Активируйте ключ во вкладке "Активация"
-        """)
-        instruction.setTextFormat(Qt.RichText)
-        layout.addWidget(instruction)
+        """,
+            layout,
+        )
+
+    def _extracted_from_setup_payment_tab_32(self, arg0, arg1, arg2, tariffs_layout):
+        monthly_btn = QPushButton(arg0)
+        monthly_btn.setStyleSheet(arg1)
+        monthly_btn.clicked.connect(lambda: self.pay_with_yoomoney(arg2))
+        tariffs_layout.addWidget(monthly_btn)
+
+    def _extracted_from_setup_payment_tab_11(self, arg0, arg1):
+        price_label = QLabel(arg0)
+        price_label.setTextFormat(Qt.RichText)
+        arg1.addWidget(price_label)
 
     def setup_activation_tab(self, layout):
-        """Вкладка активации по ключу"""
-
         title = QLabel("Активация лицензионного ключа")
         title.setStyleSheet("font-size: 18px; font-weight: bold; color: #4CAF50;")
         layout.addWidget(title)
@@ -173,12 +175,16 @@ class PaymentWindow(QDialog):
                 pass
 
     def pay_with_yoomoney(self, plan_type):
+        if not self.account_manager or not self.account_manager.token:
+            QMessageBox.warning(self, "Требуется авторизация", "Для оплаты необходимо войти в аккаунт.")
+            return
+
         try:
             if plan_type == 'monthly':
-                amount = "2"
+                amount = "100"
                 plan_name = "Месячная подписка"
             elif plan_type == 'yearly':
-                amount = "10"
+                amount = "1000"
                 plan_name = "Годовая подписка"
             else:
                 amount = "299"
@@ -213,8 +219,7 @@ class PaymentWindow(QDialog):
         try:
             if os.path.exists("yoomoney_token.txt"):
                 with open("yoomoney_token.txt", "r") as f:
-                    token = f.read().strip()
-                    if token:
+                    if token := f.read().strip():
                         from yoomoney import Client
                         self.client = Client(token)
         except:
@@ -269,32 +274,6 @@ class PaymentWindow(QDialog):
         except Exception as e:
             QMessageBox.critical(self, "Ошибка",
                 f"Не удалось сохранить лицензию:\n{str(e)}")
-
-    def activate_demo(self):
-        """Активирует демо-режим"""
-        import json
-
-        license_data = {
-            "type": "demo",
-            "activated": datetime.now().strftime("%Y-%m-%d"),
-            "expires": (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d"),
-            "product": "music_player_demo",
-            "features": ["metadata", "lyrics"]
-        }
-
-        try:
-            with open("demo_license.json", "w") as f:
-                json.dump(license_data, f, indent=2)
-
-            QMessageBox.information(self, "Демо активировано",
-                "Демо-режим активирован на 30 дней!\n"
-                "Все функции временно доступны.")
-
-            self.close()
-
-        except Exception as e:
-            QMessageBox.critical(self, "Ошибка",
-                f"Не удалось активировать демо:\n{str(e)}")
 
     def check_key(self):
         key = self.key_input.text().strip()

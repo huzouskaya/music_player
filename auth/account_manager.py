@@ -2,6 +2,8 @@ import requests
 import json
 from typing import Optional, Dict
 from .device_fingerprint import DeviceFingerprint
+import os
+import base64
 
 class AccountManager:
     def __init__(self, server_url: str = "http://localhost:5000"):
@@ -41,6 +43,7 @@ class AccountManager:
                 if data['success']:
                     self.token = data['token']
                     self.user_id = data['user_id']
+                    self.save_credentials(email, password)
                     return True
             return False
         except Exception:
@@ -130,3 +133,40 @@ class AccountManager:
             return None
         except Exception:
             return None
+
+    def save_credentials(self, email: str, password: str):
+        try:
+            credentials = {
+                'email': email,
+                'password': base64.b64encode(password.encode()).decode()
+            }
+            with open('credentials.json', 'w') as f:
+                json.dump(credentials, f)
+        except Exception:
+            pass
+
+    def load_credentials(self) -> Optional[Dict]:
+        try:
+            if os.path.exists('credentials.json'):
+                with open('credentials.json', 'r') as f:
+                    credentials = json.load(f)
+                    credentials['password'] = base64.b64decode(credentials['password'].encode()).decode()
+                    return credentials
+        except Exception:
+            pass
+        return None
+
+    def auto_login(self) -> bool:
+        credentials = self.load_credentials()
+        if credentials:
+            return self.login(credentials['email'], credentials['password'])
+        return False
+
+    def logout(self):
+        self.token = None
+        self.user_id = None
+        try:
+            if os.path.exists('credentials.json'):
+                os.remove('credentials.json')
+        except Exception:
+            pass

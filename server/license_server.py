@@ -24,7 +24,7 @@ SECRET_KEY = "music_player_secret_2024"
 SMTP_SERVER = "smtp.gmail.com"
 SMTP_PORT = 587
 SMTP_USERNAME = os.getenv("SMTP_USERNAME", "vspace.feature@gmail.com")
-SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "SpaceFeature5")
+SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "btsp eqeb ahxx ygeq")
 
 YOOMONEY_RECEIVER = "4100119422569693"
 
@@ -33,7 +33,6 @@ def generate_activation_key() -> str:
     return ''.join(secrets.choice(chars) for _ in range(16))
 
 def send_activation_email(email: str, activation_key: str, plan_type: str):
-    """Send activation key via email"""
     try:
         msg = MIMEMultipart()
         msg['From'] = SMTP_USERNAME
@@ -78,7 +77,7 @@ def create_token(user_id: int, email: str) -> str:
     payload = {
         'user_id': user_id,
         'email': email,
-        'exp': datetime.now().timestamp() + 86400
+        'exp': datetime.now().timestamp() + 86420
     }
     return jwt.encode(payload, SECRET_KEY, algorithm='HS256')
 
@@ -89,13 +88,11 @@ def verify_token(token: str) -> Optional[dict]:
         return None
 
 def generate_server_activation_key() -> str:
-    """Генерирует уникальный ключ активации на сервере"""
-    return str(uuid.uuid4()).replace('-', '')[:20].upper()  # 20 символов
+    return str(uuid.uuid4()).replace('-', '')[:20].upper()
 
 def generate_client_hash(server_key: str, device_hash: str) -> str:
-    """Генерирует хэш для клиента на основе серверного ключа и устройства"""
     combined = f"{server_key}:{device_hash}:{SECRET_KEY}"
-    return hashlib.sha256(combined.encode()).hexdigest()[:16].upper()  # 16 символов
+    return hashlib.sha256(combined.encode()).hexdigest()[:16].upper()
 
 @app.route('/api/register', methods=['POST'])
 def register():
@@ -124,20 +121,24 @@ def login():
     data = request.json
     email = data.get('email')
     password = data.get('password')
-    
+    device_hash = data.get('device_hash')
+
     if not email or not password:
         return jsonify({'success': False, 'error': 'Missing data'}), 400
-    
+
     user = db.get_user_by_email(email)
     if not user:
         return jsonify({'success': False, 'error': 'User not found'}), 404
-    
+
     password_hash = hash_password(password)
     if user['password_hash'] != password_hash:
         return jsonify({'success': False, 'error': 'Invalid password'}), 401
-    
+
     db.update_last_login(user['id'])
-    
+
+    if device_hash:
+        db.add_device(user['id'], device_hash, "Вход в аккаунт")
+
     token = create_token(user['id'], email)
     return jsonify({
         'success': True,
@@ -347,7 +348,6 @@ def activate_license():
 
 @app.route('/api/verify_activation', methods=['POST'])
 def verify_activation():
-    """Проверяет активацию по клиентскому ключу"""
     data = request.json
     client_key = data.get('activation_key')
     device_hash = data.get('device_hash')
@@ -411,7 +411,6 @@ def verify_activation():
 
 @app.route('/api/payment_webhook', methods=['POST'])
 def payment_webhook():
-    """Обработчик вебхуков от YooMoney для обновления статуса платежей"""
     try:
         data = request.json
         if not data:
