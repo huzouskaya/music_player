@@ -49,7 +49,7 @@ class PaymentWindow(QDialog):
         info_layout = QVBoxLayout(info_group)
 
         self._extracted_from_setup_payment_tab_11(
-            "<h2>100 ₽/месяц или 1000 ₽/год</h2>", info_layout
+            "<h2>10 ₽/месяц или 100 ₽/год</h2>", info_layout
         )
         self._extracted_from_setup_payment_tab_11(
             """
@@ -69,7 +69,7 @@ class PaymentWindow(QDialog):
         tariffs_layout = QVBoxLayout(tariffs_group)
 
         self._extracted_from_setup_payment_tab_32(
-            "Месячная подписка - 100 ₽",
+            "Месячная подписка - 10 ₽",
             """
             QPushButton {
                 background-color: #2196F3;
@@ -87,7 +87,7 @@ class PaymentWindow(QDialog):
             tariffs_layout,
         )
         self._extracted_from_setup_payment_tab_32(
-            "Годовая подписка - 1000 ₽",
+            "Годовая подписка - 100 ₽",
             """
             QPushButton {
                 background-color: #8B00FF;
@@ -181,10 +181,10 @@ class PaymentWindow(QDialog):
 
         try:
             if plan_type == 'monthly':
-                amount = "100"
+                amount = "10"
                 plan_name = "Месячная подписка"
             elif plan_type == 'yearly':
-                amount = "1000"
+                amount = "100"
                 plan_name = "Годовая подписка"
             else:
                 amount = "299"

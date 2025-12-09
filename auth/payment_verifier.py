@@ -105,7 +105,7 @@ class PaymentVerifier:
 
             print("Платёж подтверждён. Активация премиум подписки...")
 
-            self._save_license_cache(True, 8760)
+            self._save_license_cache(True, 8765)
 
             print("Премиум подписка активирована! Теперь можно использовать все функции офлайн.")
             return True

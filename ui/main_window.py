@@ -35,14 +35,15 @@ class MainWindow(QMainWindow):
         self._slider_pressed = False
         self.metadata_visible = False
         self.lyrics_visible = False
-        
+        self.has_premium = False
+
         ThemeManager.load_theme_from_settings()
         
         self.load_icons()
         self.setup_ui()
         self.setup_timer()
         self.setup_player_connections()
-        self.account_manager = AccountManager("http://localhost:5000")
+        self.account_manager = AccountManager("http://localhost:5050")
         self.check_subscription_on_startup()
         self.create_menu()
         self.show_promo_if_needed()
@@ -260,11 +261,15 @@ class MainWindow(QMainWindow):
         self.metadata_btn = QPushButton("Метаданные")
         self.metadata_btn.setCheckable(True)
         self.metadata_btn.clicked.connect(self.toggle_metadata)
+        if not self.has_premium:
+            self.metadata_btn.setEnabled(False)
         info_buttons_layout.addWidget(self.metadata_btn)
         
         self.lyrics_btn = QPushButton("Текст песни")
         self.lyrics_btn.setCheckable(True)
         self.lyrics_btn.clicked.connect(self.toggle_lyrics)
+        if not self.has_premium:
+            self.lyrics_btn.setEnabled(False)
         info_buttons_layout.addWidget(self.lyrics_btn)
         
         layout.addLayout(info_buttons_layout)
@@ -591,13 +596,20 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "Ошибка", "Не удалось сохранить метаданные")
     
     def save_lyrics(self):
+        verifier = PaymentVerifier()
+        if not verifier.verify_license():
+            dialog = SubscriptionDialog(self)
+            dialog.exec()
+            if not verifier.verify_license():
+                return
+
         if self.current_track:
             lyrics_data = {
                 'original': self.lyrics_text.toPlainText(),
                 'translation': '',
                 'auto_translated': False
             }
-            
+
             if not self.lyrics_manager.save_lyrics(self.current_track, lyrics_data):
                 QMessageBox.warning(self, "Ошибка", "Не удалось сохранить текст")
     

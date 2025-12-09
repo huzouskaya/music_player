@@ -118,7 +118,8 @@ def register():
 
 @app.route('/api/login', methods=['POST'])
 def login():
-    data = request.json
+    data = request.json or {}
+    device_hash = data.get('device_hash')
     email = data.get('email')
     password = data.get('password')
     device_hash = data.get('device_hash')
@@ -145,44 +146,7 @@ def login():
         'token': token,
         'user_id': user['id']
     })
-
-@app.route('/api/check_subscription', methods=['POST'])
-def check_subscription():
-    token = request.headers.get('Authorization')
-    if not token:
-        return jsonify({'valid': False, 'error': 'No token'}), 401
     
-    user_data = verify_token(token)
-    if not user_data:
-        return jsonify({'valid': False, 'error': 'Invalid token'}), 401
-    
-    user_id = user_data['user_id']
-    device_hash = request.json.get('device_hash')
-    
-    subscription = db.get_active_subscription(user_id)
-    if not subscription:
-        return jsonify({'valid': False, 'error': 'No active subscription'}), 403
-    
-    if device_hash:
-        devices = db.get_user_devices(user_id)
-        device_hashes = [d['device_hash'] for d in devices]
-        
-        if device_hash not in device_hashes:
-            if not db.add_device(user_id, device_hash, "Новое устройство"):
-                return jsonify({
-                    'valid': False, 
-                    'error': 'Device limit reached (max 4)'
-                }), 403
-    
-    return jsonify({
-        'valid': True,
-        'subscription': {
-            'plan_type': subscription['plan_type'],
-            'end_date': subscription['end_date'],
-            'days_left': (datetime.fromisoformat(subscription['end_date']) - datetime.now()).days
-        }
-    })
-
 @app.route('/api/create_payment', methods=['POST'])
 def create_payment():
     token = request.headers.get('Authorization')
@@ -200,7 +164,7 @@ def create_payment():
     if not device_hash:
         return jsonify({'success': False, 'error': 'Device hash required'}), 400
 
-    amount = data.get('amount', 299.0 if plan_type == 'monthly' else 2490.0)
+    amount = data.get('amount', 10.0 if plan_type == 'monthly' else 100.0)
 
     if plan_type not in ['monthly', 'yearly']:
         return jsonify({'success': False, 'error': 'Invalid plan type'}), 400
@@ -234,11 +198,6 @@ def create_payment():
 
             payment_url = quickpay.redirected_url
             print(f"Payment URL created: {payment_url}")
-
-            user_email = user_data['email']
-            plan_name = "Месячная подписка" if plan_type == 'monthly' else "Годовая подписка"
-
-            send_activation_email(user_email, client_key, plan_name)
 
             return jsonify({
                 'success': True,
@@ -386,7 +345,7 @@ def verify_activation():
     device_hashes = [d['device_hash'] for d in devices]
 
     if device_hash not in device_hashes:
-        if len(devices) >= 4:
+        if len(devices) > 4:
             return jsonify({'success': False, 'error': 'Device limit reached'}), 403
         db.add_device(user_id, device_hash, "Активировано")
 
@@ -437,7 +396,7 @@ def payment_webhook():
             conn.close()
             return jsonify({'status': 'error', 'message': 'Payment not found'}), 404
 
-        if abs(payment['amount'] - amount) > 0.01:
+        if abs(payment['amount'] - amount) > 5:
             conn.close()
             return jsonify({'status': 'error', 'message': 'Amount mismatch'}), 400
 
@@ -453,14 +412,66 @@ def payment_webhook():
             WHERE id = ?
         ''', (payment['subscription_id'],))
 
+        cursor.execute('''
+            SELECT u.email, s.plan_type
+            FROM users u
+            JOIN subscriptions s ON s.user_id = u.id
+            WHERE s.id = ?
+        ''', (payment['subscription_id'],))
+
+        user_info = cursor.fetchone()
         conn.commit()
         conn.close()
+
+        if user_info:
+            user_email = user_info['email']
+            plan_name = "Месячная подписка" if user_info['plan_type'] == 'monthly' else "Годовая подписка"
+            send_activation_email(user_email, payment['client_key'], plan_name)
 
         return jsonify({'status': 'success'}), 200
 
     except Exception as e:
         print(f"Webhook error: {e}")
         return jsonify({'status': 'error', 'message': 'Internal error'}), 500
+    
+@app.route('/api/check_subscription', methods=['POST'])
+def check_subscription():
+    token = request.headers.get('Authorization')
+    if not token:
+        return jsonify({'valid': False, 'error': 'No token'}), 401
+    
+    user_data = verify_token(token)
+    if not user_data:
+        return jsonify({'valid': False, 'error': 'Invalid token'}), 401
+    
+    user_id = user_data['user_id']
+    data = request.json or {}
+    device_hash = data.get('device_hash')
+    subscription = db.get_active_subscription(user_id)
+    
+    if not subscription:
+        print("⚠️ Нет активной подписки")
+        return jsonify({'valid': False, 'error': 'No active subscription'}), 403
+    
+    if device_hash:
+        devices = db.get_user_devices(user_id)
+        device_hashes = [d['device_hash'] for d in devices]
+        
+        if device_hash not in device_hashes and not db.add_device(user_id, device_hash, "Новое устройство"):
+            return jsonify({
+                'valid': False, 
+                'error': 'Device limit reached (max 4)'
+            }), 403
+    
+    print(f"✅ Подписка валидна: {subscription['plan_type']}")
+    return jsonify({
+        'valid': True,
+        'subscription': {
+            'plan_type': subscription['plan_type'],
+            'end_date': subscription['end_date'],
+            'days_left': (datetime.fromisoformat(subscription['end_date']) - datetime.now()).days
+        }
+    })
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    app.run(debug=True, port=5050)

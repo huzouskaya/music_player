@@ -6,7 +6,7 @@ import os
 import base64
 
 class AccountManager:
-    def __init__(self, server_url: str = "http://localhost:5000"):
+    def __init__(self, server_url: str = "http://localhost:5050"):
         self.server_url = server_url
         self.token = None
         self.user_id = None
@@ -72,7 +72,7 @@ class AccountManager:
 
         try:
             headers = {'Authorization': self.token}
-            amount = 100.0 if plan_type == 'monthly' else 1000.0
+            amount = 10.0 if plan_type == 'monthly' else 100.0
 
             response = requests.post(
                 f"{self.server_url}/api/create_payment",

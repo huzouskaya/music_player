@@ -78,6 +78,7 @@ class AccountWindow(QWidget):
         layout.addLayout(button_layout)
 
         self.setLayout(layout)
+        self.load_account_info()
 
     def load_account_info(self):
         info = self.account_manager.get_account_info()
