@@ -729,6 +729,14 @@ class MainWindow(QMainWindow):
         check_action = QAction('Проверить статус', self)
         check_action.triggered.connect(self.check_subscription)
         subscription_menu.addAction(check_action)
+        
+        about_menu = menubar.addMenu('Информация')
+        company_action = QAction('О приложении', self)
+        company_action.triggered.connect(self.open_about_app)
+        about_menu.addAction(company_action)        
+        developers_action = QAction('О разработчиках', self)
+        developers_action.triggered.connect(self.open_about_developers)
+        about_menu.addAction(developers_action)
     
     def check_subscription_on_startup(self):
         if self.try_auto_login():
@@ -816,3 +824,13 @@ class MainWindow(QMainWindow):
     
     def disable_premium_features(self):
         self.has_premium = False
+
+    def open_about_app(self):
+        from .about_app_window import AboutAppWindow
+        self.about_app_window = AboutAppWindow()
+        self.about_app_window.show()
+
+    def open_about_developers(self):
+        from .about_developers_window import AboutDevelopersWindow
+        self.about_developers_window = AboutDevelopersWindow()
+        self.about_developers_window.show()
