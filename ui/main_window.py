@@ -43,7 +43,7 @@ class MainWindow(QMainWindow):
         self.setup_ui()
         self.setup_timer()
         self.setup_player_connections()
-        self.account_manager = AccountManager("http://localhost:5050")
+        self.account_manager = AccountManager()
         self.check_subscription_on_startup()
         self.create_menu()
         self.show_promo_if_needed()

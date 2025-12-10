@@ -6,7 +6,7 @@ import os
 import base64
 
 class AccountManager:
-    def __init__(self, server_url: str = "http://localhost:5050"):
+    def __init__(self, server_url: str = "http://10.169.54.81:80"):
         self.server_url = server_url
         self.token = None
         self.user_id = None
@@ -73,10 +73,12 @@ class AccountManager:
         try:
             headers = {'Authorization': self.token}
             amount = 10.0 if plan_type == 'monthly' else 100.0
+            device_hash = DeviceFingerprint.get_fingerprint()
+            print(device_hash)
 
             response = requests.post(
                 f"{self.server_url}/api/create_payment",
-                json={'plan_type': plan_type, 'amount': amount},
+                json={'plan_type': plan_type, 'amount': amount, 'device_hash': device_hash},
                 headers=headers,
                 timeout=10
             )

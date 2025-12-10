@@ -177,7 +177,7 @@ def create_payment():
     if not subscription_id:
         return jsonify({'success': False, 'error': 'Subscription creation failed'}), 500
 
-    payment_id = db.create_payment_with_keys(
+    payment_id = db.create_payment_with_key(
         user_data['user_id'],
         amount,
         subscription_id,
@@ -474,4 +474,4 @@ def check_subscription():
     })
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5050)
+    app.run(debug=True, host='0.0.0.0', port=80)

@@ -13,6 +13,7 @@ from core.file_scanner import FileScanner
 from core.metadata_editor import MetadataEditor
 from ui.main_window import MainWindow
 from ui.themes import ThemeManager
+from auth.account_manager import AccountManager
 
 class MiniPlayer(QMainWindow):
     def __init__(self):
@@ -24,6 +25,9 @@ class MiniPlayer(QMainWindow):
         self._slider_pressed = False
 
         ThemeManager.load_theme_from_settings()
+
+        self.account_manager = AccountManager()
+        self.account_manager.auto_login()
 
         self.load_icons()
         self.setup_ui()

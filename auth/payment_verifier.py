@@ -8,7 +8,7 @@ import json
 from datetime import datetime, timedelta
 
 class PaymentVerifier:
-    def __init__(self, api_url: str = "https://192.168.56.1:5050/api"):
+    def __init__(self, api_url: str = "https://10.169.54.81:80/api"):
         self.api_url = api_url
         self.user_data = self._get_user_identifier()
         self.cache_file = os.path.join(os.path.expanduser("~"), ".music_player_license")
