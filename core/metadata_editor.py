@@ -10,9 +10,8 @@ class MetadataEditor:
         self.supported_formats = {'.mp3', '.flac', '.m4a', '.aac'}
     
     def get_metadata(self, file_path: str) -> Dict[str, Any]:
-        """Получение метаданных трека"""
         try:
-            audio_file = mutagen.File(file_path, easy=False)  # Используем easy=False для полных тегов
+            audio_file = mutagen.File(file_path, easy=False)
             if audio_file is None:
                 return {}
             
@@ -26,7 +25,6 @@ class MetadataEditor:
                 elif file_path.lower().endswith(('.m4a', '.aac')):
                     metadata = self._get_mp4_metadata(audio_file)
             
-            # Добавляем техническую информацию
             if hasattr(audio_file, 'info'):
                 metadata['length'] = audio_file.info.length
                 metadata['bitrate'] = getattr(audio_file.info, 'bitrate', 0)
@@ -47,21 +45,18 @@ class MetadataEditor:
         if not tags:
             return metadata
             
-        # Основные теги
         metadata['title'] = self._get_tag_value(tags, 'TIT2')
         metadata['artist'] = self._get_tag_value(tags, 'TPE1')
         metadata['album'] = self._get_tag_value(tags, 'TALB')
         metadata['album_artist'] = self._get_tag_value(tags, 'TPE2')
         metadata['composer'] = self._get_tag_value(tags, 'TCOM')
         
-        # Дата/год - пробуем разные теги
         metadata['year'] = self._get_tag_value(tags, 'TDRC') or self._get_tag_value(tags, 'TYER')
         metadata['date'] = metadata['year']
         
         metadata['genre'] = self._get_tag_value(tags, 'TCON')
         metadata['comment'] = self._get_tag_value(tags, 'COMM')
         
-        # Дополнительные теги
         metadata['track_number'] = self._get_track_number(tags)
         metadata['disc_number'] = self._get_disc_number(tags)
         
@@ -75,7 +70,6 @@ class MetadataEditor:
         if not tags:
             return metadata
             
-        # Vorbis comments для FLAC
         metadata['title'] = tags.get('title', [''])[0] if tags.get('title') else ''
         metadata['artist'] = tags.get('artist', [''])[0] if tags.get('artist') else ''
         metadata['album'] = tags.get('album', [''])[0] if tags.get('album') else ''
@@ -91,14 +85,12 @@ class MetadataEditor:
         return metadata
     
     def _get_mp4_metadata(self, audio_file) -> Dict[str, Any]:
-        """Получение MP4 метаданных"""
         metadata = {}
         tags = audio_file.tags
         
         if not tags:
             return metadata
             
-        # iTunes-style tags для MP4
         metadata['title'] = tags.get('\xa9nam', [''])[0] if tags.get('\xa9nam') else ''
         metadata['artist'] = tags.get('\xa9ART', [''])[0] if tags.get('\xa9ART') else ''
         metadata['album'] = tags.get('\xa9alb', [''])[0] if tags.get('\xa9alb') else ''
@@ -109,7 +101,6 @@ class MetadataEditor:
         metadata['genre'] = tags.get('\xa9gen', [''])[0] if tags.get('\xa9gen') else ''
         metadata['comment'] = tags.get('\xa9cmt', [''])[0] if tags.get('\xa9cmt') else ''
         
-        # Номер трека и диска
         trkn = tags.get('trkn')
         if trkn:
             metadata['track_number'] = f"{trkn[0][0]}/{trkn[0][1]}" if trkn[0][1] else str(trkn[0][0])
@@ -121,14 +112,12 @@ class MetadataEditor:
         return metadata
     
     def _get_tag_value(self, tags, tag_name):
-        """Безопасное получение значения тега"""
         try:
             return str(tags[tag_name][0]) if tag_name in tags else ''
         except:
             return ''
     
     def _get_track_number(self, tags):
-        """Получение номера трека"""
         try:
             if 'TRCK' in tags:
                 return str(tags['TRCK'][0])
@@ -137,7 +126,6 @@ class MetadataEditor:
             return ''
     
     def _get_disc_number(self, tags):
-        """Получение номера диска"""
         try:
             if 'TPOS' in tags:
                 return str(tags['TPOS'][0])
@@ -146,7 +134,6 @@ class MetadataEditor:
             return ''
     
     def set_metadata(self, file_path: str, metadata: Dict[str, str]) -> bool:
-        """Установка метаданных трека"""
         try:
             if not os.path.exists(file_path):
                 print(f"Файл не существует: {file_path}")
@@ -171,13 +158,11 @@ class MetadataEditor:
     def _set_id3_metadata(self, file_path: str, metadata: Dict[str, str]) -> bool:
         """Установка ID3 метаданных"""
         try:
-            # Загружаем или создаем новые теги
             try:
                 tags = ID3(file_path)
             except:
                 tags = ID3()
             
-            # Кодировка 3 = UTF-8
             encoding = 3
             
             if metadata.get('title'):
@@ -197,13 +182,11 @@ class MetadataEditor:
             if metadata.get('comment'):
                 tags['COMM'] = COMM(encoding=encoding, text=metadata['comment'])
             
-            # Номер трека и диска
             if metadata.get('track_number'):
                 tags['TRCK'] = mutagen.id3.TRCK(encoding=encoding, text=metadata['track_number'])
             if metadata.get('disc_number'):
                 tags['TPOS'] = mutagen.id3.TPOS(encoding=encoding, text=metadata['disc_number'])
             
-            # Сохраняем теги
             tags.save(file_path)
             print(f"Метаданные успешно сохранены для {file_path}")
             return True
@@ -213,11 +196,8 @@ class MetadataEditor:
             return False
 
     def _set_flac_metadata(self, file_path: str, metadata: Dict[str, str]) -> bool:
-        """Установка FLAC метаданных"""
         try:
             audio = FLAC(file_path)
-            
-            # Очищаем старые теги перед установкой новых
             audio.delete()
             
             if metadata.get('title'):
@@ -250,11 +230,8 @@ class MetadataEditor:
             return False
 
     def _set_mp4_metadata(self, file_path: str, metadata: Dict[str, str]) -> bool:
-        """Установка MP4 метаданных"""
         try:
             audio = MP4(file_path)
-            
-            # Очищаем старые теги
             audio.clear()
             
             if metadata.get('title'):
@@ -274,7 +251,6 @@ class MetadataEditor:
             if metadata.get('comment'):
                 audio['\xa9cmt'] = metadata['comment']
             
-            # Номер трека и диска
             if metadata.get('track_number'):
                 try:
                     track_num = int(metadata['track_number'].split('/')[0])
@@ -298,18 +274,13 @@ class MetadataEditor:
             return False
 
     def get_supported_formats(self):
-        """Получить список поддерживаемых форматов"""
         return self.supported_formats
 
-# Пример использования
 if __name__ == "__main__":
     editor = MetadataEditor()
-    
-    # Пример чтения метаданных
     metadata = editor.get_metadata("example.mp3")
     print("Текущие метаданные:", metadata)
     
-    # Пример записи метаданных
     new_metadata = {
         'title': 'Название трека',
         'artist': 'Исполнитель',

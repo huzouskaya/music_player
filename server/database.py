@@ -268,7 +268,7 @@ class Database:
     def create_payment_with_key(self, user_id: int, amount: float,
                                 subscription_id: int, activation_key: str) -> Optional[int]:
         try:
-            key_expires = datetime.now() + timedelta(hours=24)  # Ключ действителен 24 часа
+            key_expires = datetime.now() + timedelta(hours=24)
 
             conn = self.get_connection()
             cursor = conn.cursor()

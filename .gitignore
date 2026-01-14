@@ -1,6 +1,8 @@
 # user files
 .vscode/
 .json
+build_app/
+dist/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

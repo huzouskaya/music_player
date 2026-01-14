@@ -28,7 +28,6 @@ class SubscriptionDialog(QDialog):
         header_label.setAlignment(Qt.AlignCenter)
         layout.addWidget(header_label)
 
-        # Benefits section
         benefits_frame = QFrame()
         benefits_frame.setFrameStyle(QFrame.Box)
         benefits_frame.setStyleSheet("""
@@ -64,14 +63,12 @@ class SubscriptionDialog(QDialog):
 
         layout.addWidget(benefits_frame)
 
-        # Pricing section
-        pricing_label = QLabel("Стоимость: 299₽ / месяц")
+        pricing_label = QLabel("Стоимость: 10₽ / месяц")
         pricing_label.setFont(QFont("Arial", 16, QFont.Bold))
         pricing_label.setAlignment(Qt.AlignCenter)
         pricing_label.setStyleSheet("color: #0078d7;")
         layout.addWidget(pricing_label)
 
-        # Payment methods
         payment_label = QLabel("Способы оплаты:")
         payment_label.setFont(QFont("Arial", 12, QFont.Bold))
         layout.addWidget(payment_label)
@@ -82,7 +79,6 @@ class SubscriptionDialog(QDialog):
             ("💳", "Банковская\nкарта"),
             ("📱", "СБП"),
             ("🅿️", "PayPal"),
-            ("💰", "Крипто-\nвалюта")
         ]
 
         for icon, text in payment_methods:
@@ -165,14 +161,14 @@ class SubscriptionDialog(QDialog):
 
     def purchase_subscription(self):
         reply = QMessageBox.question(self, "Подтверждение оплаты",
-                                    "Вы уверены, что хотите приобрести премиум подписку за 299₽?\n\n"
+                                    "Вы уверены, что хотите приобрести премиум подписку за 10₽?\n\n"
                                     "Оплата будет списана с вашей карты.",
                                     QMessageBox.Yes | QMessageBox.No,
                                     QMessageBox.No)
 
         if reply == QMessageBox.Yes:
             QMessageBox.information(self, "Успех!",
-                                    "оздравляем! Премиум подписка активирована!\n\n"
+                                    "Поздравляем! Премиум подписка активирована!\n\n"
                                     "Теперь вам доступны все функции приложения.")
 
             verifier = PaymentVerifier()

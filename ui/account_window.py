@@ -271,7 +271,6 @@ class AccountWindow(QWidget):
             return
 
         if self.account_manager.login(email, password):
-            # QMessageBox.information(self, "Успех", "Вход выполнен успешно!")
             self.rebuild_ui()
         else:
             QMessageBox.warning(self, "Ошибка", "Неверный email или пароль")
@@ -294,7 +293,6 @@ class AccountWindow(QWidget):
             return
 
         if self.account_manager.register(email, password):
-            # QMessageBox.information(self, "Успех", "Регистрация выполнена успешно! Теперь войдите в аккаунт.")
             self.login_email.setText(email)
         else:
             QMessageBox.warning(self, "Ошибка", "Не удалось зарегистрироваться. Возможно, email уже используется.")
@@ -308,5 +306,4 @@ class AccountWindow(QWidget):
 
         if reply == QMessageBox.Yes:
             self.account_manager.logout()
-            # QMessageBox.information(self, "Успех", "Вы вышли из аккаунта")
             self.rebuild_ui()

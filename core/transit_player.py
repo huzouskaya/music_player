@@ -8,7 +8,6 @@ class TransitPlayer:
         self.current_file = None
         
     def play_file(self, file_path: str):
-        """Воспроизводит файл напрямую с диска"""
         if not os.path.exists(file_path):
             raise FileNotFoundError(f"Файл не найден: {file_path}")
         

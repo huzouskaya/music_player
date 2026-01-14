@@ -314,7 +314,6 @@ class SettingsWindow(QWidget):
             """)
     
     def load_defaults(self):
-        """Загрузка настроек по умолчанию"""
         self.theme_combo.setCurrentIndex(0)
         self.lang_combo.setCurrentIndex(0)
         self.crossfade_check.setChecked(True)

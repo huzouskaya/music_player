@@ -5,13 +5,10 @@ from typing import Optional
 class GeniusLyrics:
     def __init__(self):
         self.base_url = "https://api.genius.com"
-        # Note: For production use, you should get an API token from Genius
-        # self.access_token = "your_access_token_here"
 
     def search_lyrics(self, artist: str, title: str) -> Optional[str]:
         """Поиск текста по артисту и названию"""
         try:
-            # Try direct URL construction first (more reliable)
             formatted_artist = artist.lower().replace(' ', '-').replace('&', 'and')
             formatted_title = title.lower().replace(' ', '-').replace('&', 'and')
             song_url = f"https://genius.com/{formatted_artist}-{formatted_title}-lyrics"
@@ -20,7 +17,6 @@ class GeniusLyrics:
             if lyrics:
                 return lyrics
 
-            # Fallback to search API (requires token for full functionality)
             search_url = "https://api.genius.com/search"
             params = {'q': f"{artist} {title}"}
             headers = {
