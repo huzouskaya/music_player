@@ -6,7 +6,7 @@ import os
 import base64
 
 class AccountManager:
-    def __init__(self, server_url: str = "http://10.169.54.81:80"):
+    def __init__(self, server_url: str = "http://10.61.125.81:80"):
         self.server_url = server_url
         self.token = None
         self.user_id = None
@@ -32,21 +32,26 @@ class AccountManager:
     
     def login(self, email: str, password: str) -> bool:
         try:
+            print(f"Logging in with email: {email}")
             response = requests.post(
                 f"{self.server_url}/api/login",
                 json={'email': email, 'password': password},
                 timeout=10
             )
-
+            print(f"Login response status: {response.status_code}")
             if response.status_code == 200:
                 data = response.json()
+                print(f"Login response data: {data}")
                 if data['success']:
                     self.token = data['token']
                     self.user_id = data['user_id']
                     self.save_credentials(email, password)
+                    print("Login successful")
                     return True
+            print("Login failed")
             return False
-        except Exception:
+        except Exception as e:
+            print(f"Login exception: {e}")
             return False
     
     def check_subscription(self) -> Optional[Dict]:
